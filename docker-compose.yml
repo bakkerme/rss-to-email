@@ -6,6 +6,8 @@ services:
     environment:
       FEED_LIST_PATH: /data/feeds.txt
       STATE_PATH: /data/state.json
+      # Example: run daily at midnight UTC
+      # CRON_SCHEDULE: "0 0 * * *"
     env_file:
       - ./.env
     volumes:

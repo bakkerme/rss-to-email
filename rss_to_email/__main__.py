@@ -6,6 +6,7 @@ import os
 import sys
 
 from rss_to_email.app import run_once
+from rss_to_email.scheduler import CronConfig, run_on_schedule
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -19,6 +20,17 @@ def _build_parser() -> argparse.ArgumentParser:
         "--state-path",
         default=os.environ.get("STATE_PATH") or os.environ.get("SQLITE_PATH"),
         help="Path to JSON state file (or env STATE_PATH).",
+    )
+    parser.add_argument(
+        "--cron-schedule",
+        default=os.environ.get("CRON_SCHEDULE"),
+        help="Cron schedule (5-field) to run continuously (or env CRON_SCHEDULE).",
+    )
+    parser.add_argument(
+        "--cron-immediate",
+        action="store_true",
+        default=os.environ.get("CRON_IMMEDIATE", "").strip().lower() in {"1", "true", "yes", "y", "on"},
+        help="Run once at startup when scheduling (or env CRON_IMMEDIATE=true).",
     )
     return parser
 
@@ -40,7 +52,18 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     try:
-        run_once(feed_list_path=args.feed_list, state_path=args.state_path)
+        if args.cron_schedule:
+            run_on_schedule(
+                feed_list_path=args.feed_list,
+                state_path=args.state_path,
+                cron_config=CronConfig(
+                    schedule=args.cron_schedule,
+                    immediate=bool(args.cron_immediate),
+                    max_sleep_seconds=float(os.environ.get("CRON_MAX_SLEEP_SECONDS", "60")),
+                ),
+            )
+        else:
+            run_once(feed_list_path=args.feed_list, state_path=args.state_path)
     except KeyboardInterrupt:
         return 130
     except Exception:

@@ -38,6 +38,8 @@ Optional:
 - `MAX_ITEMS_PER_FEED` (default: no limit)
 - `SEEN_UIDS_PER_FEED_LIMIT` (default `2000`)
 - `INITIAL_RUN_SEND` (default `false`)
+- `CRON_SCHEDULE` (when set: run continuously on this 5-field cron schedule, UTC)
+- `CRON_IMMEDIATE` (default `false`, when true: also run once at container start)
 
 ## Running locally
 
@@ -87,6 +89,12 @@ docker compose run --rm rss-to-email
 ```
 
 The feed list is bind-mounted from `./feeds.txt`, and `state.json` is persisted in the named volume `rss_to_email_state`.
+
+To run continuously on a schedule, set `CRON_SCHEDULE` (example in `docker-compose.yml`), then:
+
+```sh
+docker compose up --build
+```
 
 ## Cron example (host-triggered)
 
