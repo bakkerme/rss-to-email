@@ -1,0 +1,16 @@
+services:
+  rss-to-email:
+    build: .
+    image: ghcr.io/${GITHUB_REPOSITORY:-local/rss-to-email}:latest
+    restart: "no"
+    environment:
+      FEED_LIST_PATH: /data/feeds.txt
+      STATE_PATH: /data/state.json
+    env_file:
+      - ./.env
+    volumes:
+      - ./feeds.txt:/data/feeds.txt:ro
+      - rss_to_email_state:/data
+
+volumes:
+  rss_to_email_state: {}
