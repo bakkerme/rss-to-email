@@ -31,6 +31,43 @@ def _fetch_feed(*, url: str, config: Config) -> feedparser.FeedParserDict:
     return feedparser.parse(resp.content)
 
 
+def _format_failure(*, url: str, exc: Exception, user_agent: str) -> str:
+    details: list[str] = [exc.__class__.__name__]
+    message = str(exc)
+    if message:
+        details.append(message)
+
+    if isinstance(exc, requests.HTTPError) and exc.response is not None:
+        response = exc.response
+        status = f"{response.status_code} {response.reason}".strip()
+        if status:
+            details.append(f"status={status}")
+        header_keys = {
+            "content-type",
+            "retry-after",
+            "server",
+            "x-cache",
+            "x-request-id",
+        }
+        headers = {
+            key: value
+            for key, value in response.headers.items()
+            if key.lower() in header_keys
+        }
+        if headers:
+            header_summary = ", ".join(f"{key}={value}" for key, value in headers.items())
+            details.append(f"headers={header_summary}")
+    elif isinstance(exc, requests.RequestException):
+        request = getattr(exc, "request", None)
+        method = getattr(request, "method", None) if request is not None else None
+        request_url = getattr(request, "url", None) if request is not None else None
+        if method and request_url:
+            details.append(f"request={method} {request_url}")
+
+    details.append(f"ua={user_agent}")
+    return f"{url} ({'; '.join(details)})"
+
+
 def fetch_new_items(
     *,
     feed_urls: list[str],
@@ -53,8 +90,9 @@ def fetch_new_items(
         try:
             parsed = _fetch_feed(url=feed_url, config=config)
         except Exception as exc:
-            failures.append(f"{feed_url} ({exc.__class__.__name__})")
-            logging.warning("Failed to fetch %s: %s", feed_url, exc)
+            failure = _format_failure(url=feed_url, exc=exc, user_agent=config.user_agent)
+            failures.append(failure)
+            logging.warning("Failed to fetch %s: %s", feed_url, failure)
             next_state.feeds[feed_url] = feed_state
             continue
 
